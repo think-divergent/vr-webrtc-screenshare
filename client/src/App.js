@@ -1,13 +1,15 @@
-import {useState} from 'react'
-import logo from './logo.svg';
-import './App.css';
+import {useState, useCallback} from 'react'
 import VRPlayer from './VRPlayer'
 import RTCMultiConnection from 'rtcmulticonnection'
+import sha256 from 'crypto-js/sha256';
 
+// generate a room id based on url
+const roomId = sha256("81ji0fjo73h2j-"+ window.location.href).toString()
+console.log("roomID", roomId)
 
 function App() {
-  const [videoId, setVideoId] = useState("loading")
-  const startSharing = () => {
+  const [videoId, setVideoId] = useState(null)
+  const startSharing = useCallback(() => {
     var connection = new RTCMultiConnection();
     connection.socketURL = 'https://muazkhan.com:9001/';
     //// if you want audio+video conferencing
@@ -16,12 +18,12 @@ function App() {
       oneway: true
     };
 
-    connection.openOrJoin('your-room-id');
+    connection.openOrJoin(roomId);
 
     return navigator.mediaDevices.getDisplayMedia()
       .catch(err => { console.error("Error:" + err); return null; });
-  }
-  const joinSession = () => {
+  }, [])
+  const joinSession = useCallback(() => {
     if(DeviceMotionEvent.requestPermission){
       DeviceMotionEvent.requestPermission()
     }
@@ -37,10 +39,10 @@ function App() {
     connection.mediaConstraints = {
       video: {
         mandatory: {
-          minWidth: 2880,
-          maxWidth: 2880,
-          minHeight: 1800,
-          maxHeight: 1800,
+          minWidth: width,
+          maxWidth: width,
+          minHeight: height,
+          maxHeight: height,
           minFrameRate: 30,
         },
         optional: [{
@@ -48,7 +50,7 @@ function App() {
         }]
       }
     };
-    connection.openOrJoin('your-room-id');
+    connection.openOrJoin(roomId);
     const oldOnStream = connection.onstream
     connection.onstream = (e) => {
       oldOnStream(e)
@@ -56,14 +58,13 @@ function App() {
       elm.width=100
       setVideoId(elm.id)
     }
-  }
+  }, [])
   return <div style={{height:"80vh", display:"flex"}}>
     <div>
       <button onClick={startSharing}>Share Screen</button>
       <button onClick={joinSession}>Join Session</button>
     </div>
 
-    <video id="loading" width={200} height={200} src="/sampleVideo.m4v" autoPlay muted loop playsInline/>
     {
     videoId && <div id="player" style={{
       height:200, width:200, display:"flex", overflow:"hidden", position:"relative"}}>
